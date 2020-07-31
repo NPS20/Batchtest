@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2b25752d-e39f-424a-a7da-bd96c95081f4" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="testbatchFlow" doc:id="56e43017-ccec-4ed1-b221-8cbbf58ad051" >
+		<http:listener doc:name="Listener" doc:id="d8551d86-1457-43ed-ba73-83c2a65b4c23" config-ref="HTTP_Listener_config" path="testBatch"/>
+		<logger level="INFO" doc:name="Logger" doc:id="a2b22a3f-8393-4480-973c-3cd76057a073" message="Inside testBatchFlow .. "/>
+		
+		<batch:job jobName="testbatchBatch_Job" doc:id="2b57c991-8f1b-4bff-bace-d08602b67ecc" blockSize="5">
+			<batch:process-records >
+				<batch:step name="Batch_Step1" doc:id="14222635-8be9-4ff8-8e29-d2b4840bb6d7" acceptExpression="#[vars.isProcessed == null]">
+					<ee:transform doc:name="Transform Message" doc:id="7982e979-0c35-4a9e-84fe-945ffac4a210" >
+						<ee:message >
+						</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="randomVal" ><![CDATA[%dw 2.0
+output application/json
+---
+random()
+
+]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<choice doc:name="Choice" doc:id="1b404eb1-0820-44e2-8c40-7a0158b6bd31" >
+						<when expression="#[vars.randomVal &gt; 0.5]">
+							<logger level="INFO" doc:name="Logger" doc:id="baf7973c-a922-4565-ada7-bf02fa9fe2e5" message="the value of randomVal is greater than 0.5"/>
+							<set-variable value="yes" doc:name="Set Variable" doc:id="4a9a2d82-542d-4a55-a754-d3b17b0a3f9c" variableName="isProcessed" />
+						</when>
+						<otherwise >
+							<logger level="INFO" doc:name="Logger" doc:id="c2951c69-29d2-4a46-8222-2edc335d242d" message="the value of randomVal is less than 0.5"/>
+							<set-variable value="no" doc:name="Set Variable" doc:id="fb4e7586-b0f4-4b62-b050-f2d403d0eda2" variableName="isProcessed"/>
+						</otherwise>
+					</choice>
+					<logger level="INFO" doc:name="Logger" doc:id="ddd1a54b-39fb-409a-9971-e5c6d792839d" message="id for record is #[payload.id] .....  and variable isProcessed ... #[vars.isProcessed] and randomVal is ....  #[vars.randomVal]" />
+					
+				</batch:step>
+				<batch:step name="Batch_Step2" doc:id="773c4646-6b65-40d8-8cff-8cb7c542f525" acceptExpression="#[vars.isProcessed == 'yes']">
+					<logger level="INFO" doc:name="Logger" doc:id="48bfc707-cada-4261-95b1-672737371b25" message="Inside batch step 2 .. #[payload.id]"/>
+					<scripting:execute engine="groovy" doc:name="Execute" doc:id="f436c6ba-a80f-4df9-a539-4373ce9491af" >
+						<scripting:code ><![CDATA[sleep(5000)]]></scripting:code>
+					</scripting:execute>
+				</batch:step>
+				<batch:step name="Batch_Step3" doc:id="35f38d98-b3e6-4d02-9761-9504c96a7ae2" acceptExpression="#[vars.isProcessed == 'no']">
+					
+					<logger level="INFO" doc:name="Logger" doc:id="8bd8598b-8531-458a-baf4-2aebcc4cf0ef" message="Inside batch step 3 .. #[payload.id]"/>
+					
+					
+					
+					
+					
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="7a4b5214-b6ed-4fa5-a95f-395b0e74286f" message="inside the batch complete phase .. #[message.payload.failedRecords] and the #[payload.successfulRecords] and the aggregated .. #[payload]"/>
+				
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+</mule>
